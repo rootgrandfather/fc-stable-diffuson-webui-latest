@@ -1,0 +1,71 @@
+edition: 1.0.0 #  命令行YAML规范版本，遵循语义化版本（Semantic Versioning）规范
+name: fc-stable-diffusion-webui-latest
+access: default
+vars:
+  region: "cn-hangzhou" 
+  serviceName: "serverless-devs-application-webui-latest"
+  functionName: "stable-diffusion-webui-latest" 
+  # imageUrl: "registry.cn-hangzhou.aliyuncs.com/aliyun-fc/fc-stable-diffusion:anime-v12" 
+  imageUrl: "registry.cn-hangzhou.aliyuncs.com/pdkpdk/pdkpdk-webui-latest:1"
+  filemgrToken: ""
+  extraArgs: "--allow-code --xformers --enable-insecure-extension-access --api"
+  enableCollect: ""
+  filemgrFilename: "filemgr-1.2.2"
+  service:
+    name: "serverless-devs-webui-latest-application"
+    description: 'stable-diffusion 部署到函数计算'
+    internetAccess: true
+    nasConfig: auto
+
+services:
+  stable-diffusion:
+    component: fc
+    actions: 
+      post-deploy: 
+        - component: fc ondemand put --qualifier LATEST --max 1
+    props:
+      region: ${vars.region}
+      service: ${vars.service}
+      function:
+        name: ${vars.functionName}
+        description: Stable Diffusion WebUI 函数
+        handler: index.handler
+        timeout: 600
+        diskSize: 512
+        caPort: 7860
+        instanceType: fc.gpu.tesla.1
+        runtime: custom-container
+        cpu: 8
+        customContainerConfig:
+          args: ''
+          accelerationType: Default
+          image: ${vars.imageUrl}
+          accelerationInfo:
+            status: Preparing
+          command: ''
+          webServerMode: true
+        instanceConcurrency: 100
+        memorySize: 32768
+        gpuMemorySize: 16384
+        asyncConfiguration: {}
+        environmentVariables:
+          EXTRA_ARGS: ${vars.extraArgs}
+          ENABLE_COLLECT: ${vars.enableCollect}
+      triggers:
+        - name: defaultTrigger
+          description: ''
+          type: http
+          qualifier: LATEST
+          config:
+            methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+            authType: anonymous
+            disableURLInternet: false
+      customDomains:
+        - domainName: auto
+          protocol: HTTP
+          routeConfigs:
+            - path: /*
